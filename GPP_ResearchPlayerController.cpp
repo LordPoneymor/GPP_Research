@@ -6,22 +6,32 @@
 #include "HeadMountedDisplayFunctionLibrary.h"
 #include "GPP_ResearchCharacter.h"
 #include "Engine/World.h"
+#include "Kismet/GameplayStatics.h"
+#include "CameraPawn.h"
+#include "GameFramework/SpringArmComponent.h"
 
 AGPP_ResearchPlayerController::AGPP_ResearchPlayerController()
 {
 	bShowMouseCursor = true;
 	DefaultMouseCursor = EMouseCursor::Crosshairs;
+
+}
+
+void AGPP_ResearchPlayerController::BeginPlay()
+{
+	Super::BeginPlay();
+
 }
 
 void AGPP_ResearchPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
 
-	// keep updating the destination every tick while desired
-	if (bMoveToMouseCursor)
-	{
-		MoveToMouseCursor();
-	}
+	//// keep updating the destination every tick while desired
+	//if (bMoveToMouseCursor)
+	//{
+	//	MoveToMouseCursor();
+	//}
 }
 
 void AGPP_ResearchPlayerController::SetupInputComponent()
