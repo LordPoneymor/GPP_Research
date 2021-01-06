@@ -9,6 +9,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "CameraPawn.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "GPP_Research_HUD.h"
+#include "GPP_ResearchCharacter.h"
 
 AGPP_ResearchPlayerController::AGPP_ResearchPlayerController()
 {
@@ -20,6 +22,9 @@ AGPP_ResearchPlayerController::AGPP_ResearchPlayerController()
 void AGPP_ResearchPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
+
+	Hud = Cast<AGPP_Research_HUD>(GetHUD());
+	Hud->Control = this;
 
 }
 
@@ -39,8 +44,8 @@ void AGPP_ResearchPlayerController::SetupInputComponent()
 	// set up gameplay key bindings
 	Super::SetupInputComponent();
 
-	InputComponent->BindAction("SetDestination", IE_Pressed, this, &AGPP_ResearchPlayerController::OnSetDestinationPressed);
-	InputComponent->BindAction("SetDestination", IE_Released, this, &AGPP_ResearchPlayerController::OnSetDestinationReleased);
+	InputComponent->BindAction("LMB", IE_Pressed, this, &AGPP_ResearchPlayerController::LMBDown);
+	InputComponent->BindAction("LMB", IE_Released, this, &AGPP_ResearchPlayerController::LMBUp);
 
 	// support touch devices 
 	InputComponent->BindTouch(EInputEvent::IE_Pressed, this, &AGPP_ResearchPlayerController::MoveToTouchLocation);
@@ -119,4 +124,46 @@ void AGPP_ResearchPlayerController::OnSetDestinationReleased()
 {
 	// clear flag to indicate we should stop updating the destination
 	bMoveToMouseCursor = false;
+}
+
+void AGPP_ResearchPlayerController::LMBDown()
+{
+	float x;
+	float y;
+	GetMousePosition(x, y);
+
+	Hud->ClickPosition = FVector2D(x,y);
+	bIsLMBDown = true;
+	Hud->bIsLMBDown = bIsLMBDown;
+
+	for (AActor* actor : SelectedActors)
+	{
+		AGPP_ResearchCharacter* character = Cast<AGPP_ResearchCharacter>(actor);
+		if (character)
+		{
+			character->bIsSelected = false;
+		}
+	}
+
+	SelectedActors.Empty();
+}
+
+void AGPP_ResearchPlayerController::LMBUp()
+{
+	float x;
+	float y;
+	GetMousePosition(x, y);
+	Hud->EndPosition = FVector2D(x, y);
+	Hud->Select();
+	bIsLMBDown = false;
+	Hud->bIsLMBDown = bIsLMBDown;
+
+	for (AActor* actor : SelectedActors)
+	{
+		AGPP_ResearchCharacter* character = Cast<AGPP_ResearchCharacter>(actor);
+		if (character)
+		{
+			character->bIsSelected = true;
+		}
+	}
 }

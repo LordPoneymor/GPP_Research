@@ -14,6 +14,9 @@ class GPP_RESEARCH_API ACameraPawn : public APawn
 public:
 	ACameraPawn();
 
+	float MaxArmLength;
+
+	float ZoomSensitivity;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Controller)
 	class AGPP_ResearchPlayerController* CameraController;
@@ -39,12 +42,13 @@ protected:
 public:	
 	float SpeedMultiplier;
 
-	float MovementSpeedCalculation();
-
 	void MoveForward(float value);
 	void MoveSideways(float value);
+	float MovementSpeedCalculation();
+
+	void ZoomIn();
+	void ZoomOut();
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
 };

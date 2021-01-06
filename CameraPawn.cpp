@@ -23,19 +23,20 @@ ACameraPawn::ACameraPawn()
 	this->Mesh->SetStaticMesh(MeshAsset.Object);
 	Mesh->SetCollisionProfileName("NoCollision");
 	Mesh->SetHiddenInGame(true);
+	Mesh->SetRelativeLocation(FVector(0, 0, 200));
 
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->SetupAttachment(Mesh);
-	SpringArm->TargetArmLength = 2500.f; 
-	//SpringArm->bUsePawnControlRotation = true; //rotate arm based on controller
-	SpringArm->SetRelativeRotation(FRotator(0, 0, -45));
+	SpringArm->TargetArmLength = 1500.f; 
+	SpringArm->SetRelativeRotation(FRotator(-45, 0, 0));
 
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
-	//attach the camera to the end of the boom and let the boom adjust the controller orientation
 	Camera->bUsePawnControlRotation = false;
 
 	SpeedMultiplier = 2.f;
+	MaxArmLength = 2500.f;
+	ZoomSensitivity = 100.f;
 }
 
 // Called when the game starts or when spawned
@@ -58,11 +59,14 @@ void ACameraPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 	PlayerInputComponent->BindAxis("MoveForward", this, &ACameraPawn::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &ACameraPawn::MoveSideways);
+
+	PlayerInputComponent->BindAction("ZoomIn", IE_Pressed, this, &ACameraPawn::ZoomIn);
+	PlayerInputComponent->BindAction("ZoomOut", IE_Pressed, this, &ACameraPawn::ZoomOut);
 }
 
 void ACameraPawn::MoveForward(float value)
 {
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Here"));
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Here"));
 	//Movement X Math
 	float sensitivity = 5;// MovementSpeedCalculation();
 	float x = SpeedMultiplier * (value * sensitivity);
@@ -98,4 +102,18 @@ float ACameraPawn::MovementSpeedCalculation()
 	float sensitivity = SpringArm->TargetArmLength / 100;
 	FMath::Clamp(sensitivity, 5.f, 20.f);
 	return sensitivity;
+}
+
+void ACameraPawn::ZoomIn()
+{
+	float armLength = SpringArm->TargetArmLength;
+
+	SpringArm->TargetArmLength = FMath::Clamp(armLength - ZoomSensitivity, 500.f, MaxArmLength);
+}
+
+void ACameraPawn::ZoomOut()
+{
+	float armLength = SpringArm->TargetArmLength;
+
+	SpringArm->TargetArmLength = FMath::Clamp(armLength + ZoomSensitivity, 500.f, MaxArmLength);
 }

@@ -14,6 +14,13 @@ class AGPP_ResearchPlayerController : public APlayerController
 public:
 	AGPP_ResearchPlayerController();
 
+	UPROPERTY(BlueprintReadWrite)
+	TArray<AActor*> SelectedActors;
+
+	class AGPP_Research_HUD* Hud;
+
+	bool bIsLMBDown;
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -43,8 +50,8 @@ protected:
 
 private:
 
-
-
+	void LMBDown();
+	void LMBUp();
 };
 
 
