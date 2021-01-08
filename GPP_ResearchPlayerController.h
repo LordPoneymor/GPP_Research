@@ -17,10 +17,20 @@ public:
 	UPROPERTY(BlueprintReadWrite)
 	TArray<AActor*> SelectedActors;
 
+	TArray<AActor*> AllActors;
+
+	TSubclassOf<class AGPP_ResearchCharacter> CharacterAsset;
+
 	class AGPP_Research_HUD* Hud;
+
+	class Formation* GroupFormation;
 
 	bool bIsLMBDown;
 
+	UPROPERTY(BlueprintReadWrite)
+	bool bIsGroupInFormation;
+	UPROPERTY(BlueprintReadWrite)
+	bool bIsGroupMoving;
 protected:
 	virtual void BeginPlay() override;
 
@@ -48,10 +58,16 @@ protected:
 	void OnSetDestinationPressed();
 	void OnSetDestinationReleased();
 
+	void MoveTo();
+
 private:
+	float UnitOffset;
 
 	void LMBDown();
 	void LMBUp();
+
+	void GetInFormation();
+	void BreakFormation();
 };
 
 

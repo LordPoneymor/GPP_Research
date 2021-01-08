@@ -11,6 +11,7 @@
 #include "HeadMountedDisplayFunctionLibrary.h"
 #include "Materials/Material.h"
 #include "Engine/World.h"
+#include "AIController.h"
 
 AGPP_ResearchCharacter::AGPP_ResearchCharacter()
 {
@@ -41,11 +42,31 @@ AGPP_ResearchCharacter::AGPP_ResearchCharacter()
 	SelectedDecal->SetRelativeLocation(FVector(0,0,-90));
 	SelectedDecal->SetHiddenInGame(true);
 
+	TargetDecal = CreateDefaultSubobject<UDecalComponent>("TargetDecal");
+	TargetDecal->SetupAttachment(RootComponent);
+	static ConstructorHelpers::FObjectFinder<UMaterialInstance> SecondDecalMaterialAsset(TEXT("Material'/Game/TopDownCPP/Blueprints/MI_Decal'"));
+	if (SecondDecalMaterialAsset.Succeeded())
+	{
+		TargetDecal->SetDecalMaterial(SecondDecalMaterialAsset.Object);
+	}
+	TargetDecal->DecalSize = FVector(16.0f, 32.0f, 32.0f);
+	TargetDecal->SetRelativeRotation(FRotator(90.0f, 0.0f, 0.0f).Quaternion());
+	TargetDecal->SetRelativeLocation(FVector(0, 0, -90));
+	TargetDecal->SetHiddenInGame(true);
+
 	// Activate ticking in order to update the cursor every frame.
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
 
 	bIsSelected = false;
+}
+
+void AGPP_ResearchCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	AIController = Cast<AAIController>(GetController());
+	//GetCharacterMovement()->SetAvoidanceEnabled(true);
 }
 
 void AGPP_ResearchCharacter::Tick(float DeltaSeconds)
@@ -56,6 +77,36 @@ void AGPP_ResearchCharacter::Tick(float DeltaSeconds)
 	{
 		SelectedDecal->SetHiddenInGame(false);
 	}
+	else
+	{
+		SelectedDecal->SetHiddenInGame(true);
+	}
+
+	if (!GetMovementComponent()->Velocity.IsNearlyZero())
+	{
+		TargetDecal->SetWorldLocation(Destination);
+		TargetDecal->SetHiddenInGame(false);
+	}
+	else
+	{
+		TargetDecal->SetHiddenInGame(true);
+	}
+
+	if (bIsInFormation)
+	{
+		SetActorRotation(FollowSlot->Orientation);
+		if (bIsMoving)
+		{
+			MoveTo(FollowSlot->GetActorLocation());
+		}
+	}
+
+	if ((GetActorLocation() - FollowSlot->GetActorLocation()).Size() <= 5)
+	{
+		bIsMoving = false;
+	}
+
+
 
 	//if (SelectedDecal != nullptr)
 	//{
@@ -83,4 +134,19 @@ void AGPP_ResearchCharacter::Tick(float DeltaSeconds)
 	//		SelectedDecal->SetWorldRotation(CursorR);
 	//	}
 	//}
+}
+
+void AGPP_ResearchCharacter::MoveToDestination()
+{
+	MoveTo(Destination);
+}
+
+void AGPP_ResearchCharacter::MoveTo(const FVector& destination)
+{
+	FAIMoveRequest moveRequest;
+	moveRequest.SetGoalLocation(destination);
+	moveRequest.SetAcceptanceRadius(5.f);
+
+	FNavPathSharedPtr navPath;
+	AIController->MoveTo(moveRequest, &navPath);
 }

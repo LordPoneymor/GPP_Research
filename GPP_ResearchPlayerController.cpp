@@ -11,12 +11,18 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "GPP_Research_HUD.h"
 #include "GPP_ResearchCharacter.h"
+#include "AiTypes.h"
+#include "Formation.h"
 
 AGPP_ResearchPlayerController::AGPP_ResearchPlayerController()
 {
 	bShowMouseCursor = true;
 	DefaultMouseCursor = EMouseCursor::Crosshairs;
+	UnitOffset = 150.f;
 
+	bIsGroupInFormation = false;
+	bIsGroupMoving = false;
+	GroupFormation = new Line{};
 }
 
 void AGPP_ResearchPlayerController::BeginPlay()
@@ -26,17 +32,30 @@ void AGPP_ResearchPlayerController::BeginPlay()
 	Hud = Cast<AGPP_Research_HUD>(GetHUD());
 	Hud->Control = this;
 
+	UGameplayStatics::GetAllActorsOfClass(this, CharacterAsset, AllActors);
 }
 
 void AGPP_ResearchPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
 
-	//// keep updating the destination every tick while desired
-	//if (bMoveToMouseCursor)
-	//{
-	//	MoveToMouseCursor();
-	//}
+	for (AActor* actor : AllActors)
+	{
+		AGPP_ResearchCharacter* character = Cast<AGPP_ResearchCharacter>(actor);
+		if (character)
+		{
+			character->bIsSelected = false;
+		}
+	}
+
+	for (AActor* actor : SelectedActors)
+	{
+		AGPP_ResearchCharacter* character = Cast<AGPP_ResearchCharacter>(actor);
+		if (character)
+		{
+			character->bIsSelected = true;
+		}
+	}
 }
 
 void AGPP_ResearchPlayerController::SetupInputComponent()
@@ -46,6 +65,10 @@ void AGPP_ResearchPlayerController::SetupInputComponent()
 
 	InputComponent->BindAction("LMB", IE_Pressed, this, &AGPP_ResearchPlayerController::LMBDown);
 	InputComponent->BindAction("LMB", IE_Released, this, &AGPP_ResearchPlayerController::LMBUp);
+
+	InputComponent->BindAction("RMB", IE_Released, this, &AGPP_ResearchPlayerController::MoveTo);
+	InputComponent->BindAction("GetIntoFormation", IE_Pressed, this, &AGPP_ResearchPlayerController::GetInFormation);
+	InputComponent->BindAction("BreakFormation", IE_Pressed, this, &AGPP_ResearchPlayerController::BreakFormation);
 
 	// support touch devices 
 	InputComponent->BindTouch(EInputEvent::IE_Pressed, this, &AGPP_ResearchPlayerController::MoveToTouchLocation);
@@ -150,20 +173,55 @@ void AGPP_ResearchPlayerController::LMBDown()
 
 void AGPP_ResearchPlayerController::LMBUp()
 {
-	float x;
-	float y;
-	GetMousePosition(x, y);
-	Hud->EndPosition = FVector2D(x, y);
-	Hud->Select();
 	bIsLMBDown = false;
 	Hud->bIsLMBDown = bIsLMBDown;
+}
+
+void AGPP_ResearchPlayerController::MoveTo()
+{
+	FHitResult hit;
+	GetHitResultUnderCursor(ECC_Visibility, true, hit);
 
 	for (AActor* actor : SelectedActors)
 	{
 		AGPP_ResearchCharacter* character = Cast<AGPP_ResearchCharacter>(actor);
 		if (character)
 		{
-			character->bIsSelected = true;
+			character->bIsMoving = true;
 		}
+	}
+
+	if (bIsGroupInFormation)
+	{
+		GroupFormation->MoveToDestination(hit.Location);
+	}
+	else
+	{
+		for (AActor* actor : SelectedActors)
+		{
+			AGPP_ResearchCharacter* character = Cast<AGPP_ResearchCharacter>(actor);
+			if (character)
+			{
+				character->MoveTo(hit.Location);
+			}
+		}
+	}
+
+}
+
+void AGPP_ResearchPlayerController::GetInFormation()
+{
+	GroupFormation->AssignSlots(SelectedActors);
+	bIsGroupInFormation = true;
+}
+
+void AGPP_ResearchPlayerController::BreakFormation()
+{
+	bIsGroupInFormation = false;
+
+	for (AActor* actor : SelectedActors)
+	{
+		AGPP_ResearchCharacter* character = Cast<AGPP_ResearchCharacter>(actor);
+		character->bIsInFormation = false;
 	}
 }
