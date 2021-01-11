@@ -84,7 +84,14 @@ void AGPP_ResearchCharacter::Tick(float DeltaSeconds)
 
 	if (!GetMovementComponent()->Velocity.IsNearlyZero())
 	{
-		TargetDecal->SetWorldLocation(Destination);
+		if (FollowSlot == nullptr)
+		{
+			TargetDecal->SetWorldLocation(Destination);
+		}
+		else
+		{
+			TargetDecal->SetWorldLocation(FollowSlot->Destination);
+		}
 		TargetDecal->SetHiddenInGame(false);
 	}
 	else
@@ -94,46 +101,13 @@ void AGPP_ResearchCharacter::Tick(float DeltaSeconds)
 
 	if (bIsInFormation)
 	{
-		SetActorRotation(FollowSlot->Orientation);
-		if (bIsMoving)
+		if (FollowSlot)
 		{
+			SetActorRotation(FollowSlot->GetActorRotation());
 			MoveTo(FollowSlot->GetActorLocation());
 		}
+
 	}
-
-	if ((GetActorLocation() - FollowSlot->GetActorLocation()).Size() <= 5)
-	{
-		bIsMoving = false;
-	}
-
-
-
-	//if (SelectedDecal != nullptr)
-	//{
-	//	if (UHeadMountedDisplayFunctionLibrary::IsHeadMountedDisplayEnabled())
-	//	{
-	//		if (UWorld* World = GetWorld())
-	//		{
-	//			FHitResult HitResult;
-	//			FCollisionQueryParams Params(NAME_None, FCollisionQueryParams::GetUnknownStatId());
-	//			FVector StartLocation = TopDownCameraComponent->GetComponentLocation();
-	//			FVector EndLocation = TopDownCameraComponent->GetComponentRotation().Vector() * 2000.0f;
-	//			Params.AddIgnoredActor(this);
-	//			World->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility, Params);
-	//			FQuat SurfaceRotation = HitResult.ImpactNormal.ToOrientationRotator().Quaternion();
-	//			SelectedDecal->SetWorldLocationAndRotation(HitResult.Location, SurfaceRotation);
-	//		}
-	//	}
-	//	else if (APlayerController* PC = Cast<APlayerController>(GetController()))
-	//	{
-	//		FHitResult TraceHitResult;
-	//		PC->GetHitResultUnderCursor(ECC_Visibility, true, TraceHitResult);
-	//		FVector CursorFV = TraceHitResult.ImpactNormal;
-	//		FRotator CursorR = CursorFV.Rotation();
-	//		SelectedDecal->SetWorldLocation(TraceHitResult.Location);
-	//		SelectedDecal->SetWorldRotation(CursorR);
-	//	}
-	//}
 }
 
 void AGPP_ResearchCharacter::MoveToDestination()

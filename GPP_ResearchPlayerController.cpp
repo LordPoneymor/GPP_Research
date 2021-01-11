@@ -12,17 +12,22 @@
 #include "GPP_Research_HUD.h"
 #include "GPP_ResearchCharacter.h"
 #include "AiTypes.h"
-#include "Formation.h"
 
 AGPP_ResearchPlayerController::AGPP_ResearchPlayerController()
 {
 	bShowMouseCursor = true;
-	DefaultMouseCursor = EMouseCursor::Crosshairs;
+	//DefaultMouseCursor = EMouseCursor::Crosshairs;
 	UnitOffset = 150.f;
 
 	bIsGroupInFormation = false;
 	bIsGroupMoving = false;
-	GroupFormation = new Line{};
+
+	static ConstructorHelpers::FObjectFinder<UBlueprint>  BPAsset(TEXT("Blueprint'/Game/Blueprints/BP_FormationSlot'"));
+	if (BPAsset.Succeeded())
+	{
+		SlotBP = (UClass*)BPAsset.Object->GeneratedClass;
+	}
+	CurrentFormation = EFormation::EF_None;
 }
 
 void AGPP_ResearchPlayerController::BeginPlay()
@@ -31,22 +36,12 @@ void AGPP_ResearchPlayerController::BeginPlay()
 
 	Hud = Cast<AGPP_Research_HUD>(GetHUD());
 	Hud->Control = this;
-
-	UGameplayStatics::GetAllActorsOfClass(this, CharacterAsset, AllActors);
+	UGameplayStatics::GetAllActorsOfClass(this, AGPP_ResearchCharacter::StaticClass(), AllActors);
 }
 
 void AGPP_ResearchPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
-
-	for (AActor* actor : AllActors)
-	{
-		AGPP_ResearchCharacter* character = Cast<AGPP_ResearchCharacter>(actor);
-		if (character)
-		{
-			character->bIsSelected = false;
-		}
-	}
 
 	for (AActor* actor : SelectedActors)
 	{
@@ -55,6 +50,11 @@ void AGPP_ResearchPlayerController::PlayerTick(float DeltaTime)
 		{
 			character->bIsSelected = true;
 		}
+	}
+
+	if (GroupFormation != nullptr)
+	{
+		GroupFormation->UpdateSlots(DeltaTime);
 	}
 }
 
@@ -67,86 +67,10 @@ void AGPP_ResearchPlayerController::SetupInputComponent()
 	InputComponent->BindAction("LMB", IE_Released, this, &AGPP_ResearchPlayerController::LMBUp);
 
 	InputComponent->BindAction("RMB", IE_Released, this, &AGPP_ResearchPlayerController::MoveTo);
-	InputComponent->BindAction("GetIntoFormation", IE_Pressed, this, &AGPP_ResearchPlayerController::GetInFormation);
+	InputComponent->BindAction("LineFormation", IE_Pressed, this, &AGPP_ResearchPlayerController::GetInLine);
+	InputComponent->BindAction("ProtectionCircleFormation", IE_Pressed, this, &AGPP_ResearchPlayerController::FormProtectionCircle);
+	InputComponent->BindAction("CircleFormation", IE_Pressed, this, &AGPP_ResearchPlayerController::FormCircle);
 	InputComponent->BindAction("BreakFormation", IE_Pressed, this, &AGPP_ResearchPlayerController::BreakFormation);
-
-	// support touch devices 
-	InputComponent->BindTouch(EInputEvent::IE_Pressed, this, &AGPP_ResearchPlayerController::MoveToTouchLocation);
-	InputComponent->BindTouch(EInputEvent::IE_Repeat, this, &AGPP_ResearchPlayerController::MoveToTouchLocation);
-
-	InputComponent->BindAction("ResetVR", IE_Pressed, this, &AGPP_ResearchPlayerController::OnResetVR);
-}
-
-void AGPP_ResearchPlayerController::OnResetVR()
-{
-	UHeadMountedDisplayFunctionLibrary::ResetOrientationAndPosition();
-}
-
-void AGPP_ResearchPlayerController::MoveToMouseCursor()
-{
-	if (UHeadMountedDisplayFunctionLibrary::IsHeadMountedDisplayEnabled())
-	{
-		if (AGPP_ResearchCharacter* MyPawn = Cast<AGPP_ResearchCharacter>(GetPawn()))
-		{
-			if (MyPawn->GetCursorToWorld())
-			{
-				UAIBlueprintHelperLibrary::SimpleMoveToLocation(this, MyPawn->GetCursorToWorld()->GetComponentLocation());
-			}
-		}
-	}
-	else
-	{
-		// Trace to see what is under the mouse cursor
-		FHitResult Hit;
-		GetHitResultUnderCursor(ECC_Visibility, false, Hit);
-
-		if (Hit.bBlockingHit)
-		{
-			// We hit something, move there
-			SetNewMoveDestination(Hit.ImpactPoint);
-		}
-	}
-}
-
-void AGPP_ResearchPlayerController::MoveToTouchLocation(const ETouchIndex::Type FingerIndex, const FVector Location)
-{
-	FVector2D ScreenSpaceLocation(Location);
-
-	// Trace to see what is under the touch location
-	FHitResult HitResult;
-	GetHitResultAtScreenPosition(ScreenSpaceLocation, CurrentClickTraceChannel, true, HitResult);
-	if (HitResult.bBlockingHit)
-	{
-		// We hit something, move there
-		SetNewMoveDestination(HitResult.ImpactPoint);
-	}
-}
-
-void AGPP_ResearchPlayerController::SetNewMoveDestination(const FVector DestLocation)
-{
-	APawn* const MyPawn = GetPawn();
-	if (MyPawn)
-	{
-		float const Distance = FVector::Dist(DestLocation, MyPawn->GetActorLocation());
-
-		// We need to issue move command only if far enough in order for walk animation to play correctly
-		if ((Distance > 120.0f))
-		{
-			UAIBlueprintHelperLibrary::SimpleMoveToLocation(this, DestLocation);
-		}
-	}
-}
-
-void AGPP_ResearchPlayerController::OnSetDestinationPressed()
-{
-	// set flag to keep updating destination until released
-	bMoveToMouseCursor = true;
-}
-
-void AGPP_ResearchPlayerController::OnSetDestinationReleased()
-{
-	// clear flag to indicate we should stop updating the destination
-	bMoveToMouseCursor = false;
 }
 
 void AGPP_ResearchPlayerController::LMBDown()
@@ -175,6 +99,20 @@ void AGPP_ResearchPlayerController::LMBUp()
 {
 	bIsLMBDown = false;
 	Hud->bIsLMBDown = bIsLMBDown;
+	if (SelectedActors.Num() == 0)
+	{
+		bIsGroupInFormation = false;
+		for (AActor* actor : AllActors)
+		{
+			AGPP_ResearchCharacter* character = Cast<AGPP_ResearchCharacter>(actor);
+			if (character)
+			{
+				character->bIsSelected = false;
+				character->bIsInFormation = false;
+				character->FollowSlot = nullptr;
+			}
+		}
+	}
 }
 
 void AGPP_ResearchPlayerController::MoveTo()
@@ -206,13 +144,52 @@ void AGPP_ResearchPlayerController::MoveTo()
 			}
 		}
 	}
-
 }
 
-void AGPP_ResearchPlayerController::GetInFormation()
+void AGPP_ResearchPlayerController::GetInLine()
 {
-	GroupFormation->AssignSlots(SelectedActors);
-	bIsGroupInFormation = true;
+	if (SelectedActors.Num() > 0 && CurrentFormation != EFormation::EF_Line)
+	{
+		if (GroupFormation != nullptr)
+		{
+			delete GroupFormation;		
+		}
+		GroupFormation = new Line{ SlotBP };
+		GroupFormation->AssignSlots(SelectedActors);
+		CurrentFormation = EFormation::EF_Line;
+		bIsGroupInFormation = true;
+	}
+}
+
+void AGPP_ResearchPlayerController::FormProtectionCircle()
+{
+	if (SelectedActors.Num() > 0 && CurrentFormation != EFormation::EF_ProtectionCircle)
+	{
+		if (GroupFormation != nullptr)
+		{
+			delete GroupFormation;
+		}
+		GroupFormation = new ProtectionCircle{ SlotBP };
+		GroupFormation->AssignSlots(SelectedActors);
+		CurrentFormation = EFormation::EF_ProtectionCircle;
+		bIsGroupInFormation = true;
+	}
+}
+
+void AGPP_ResearchPlayerController::FormCircle()
+{
+	if (SelectedActors.Num() > 0)
+	{
+		if (GroupFormation != nullptr)
+		{
+			delete GroupFormation;
+		}
+		GroupFormation = new Circle{ SlotBP };
+			
+		CurrentFormation = EFormation::EF_Circle;
+		GroupFormation->AssignSlots(SelectedActors);
+		bIsGroupInFormation = true;
+	}
 }
 
 void AGPP_ResearchPlayerController::BreakFormation()
@@ -222,6 +199,13 @@ void AGPP_ResearchPlayerController::BreakFormation()
 	for (AActor* actor : SelectedActors)
 	{
 		AGPP_ResearchCharacter* character = Cast<AGPP_ResearchCharacter>(actor);
-		character->bIsInFormation = false;
+		if (character)
+		{
+			character->bIsInFormation = false;
+			character->FollowSlot = nullptr;
+		}
 	}
+
+	delete GroupFormation;
+	GroupFormation = nullptr;
 }

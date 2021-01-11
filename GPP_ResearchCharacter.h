@@ -39,6 +39,7 @@ public:
 
 	void MoveToDestination();
 	void MoveTo(const FVector& destination);
+
 private:
 
 	

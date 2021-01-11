@@ -4,38 +4,84 @@
 #include "FormationSlot.h"
 #include "CoreMinimal.h"
 
+enum class EFormation : uint8
+{
+	EF_Line UMETA(DisplayName = "Line"),
+	EF_ProtectionCircle UMETA(DisplayName = "Protection Circle"),
+	EF_Circle UMETA(DisplayName = "Circle"),
+	EF_None UMETA(DisplayName = "None"),
+
+	EF_MAX UMETA(DisplayName = "Default Max")
+};
+
 class GPP_RESEARCH_API Formation
 {
 public:
-	Formation();
+	Formation(UClass* bpSlotRef);
 	virtual ~Formation();
 
-	void UpdateSlots(float deltaTime);
-	virtual void AssignSlots(TArray<AActor*> actors) = 0;
+	virtual void UpdateSlots(float deltaTime) = 0;
+	virtual void AssignSlots(const TArray<AActor*>& actors) = 0;
 	
 	void MoveToDestination(const FVector& dest);
 
-	class AGPP_ResearchCharacter* Leader;
-	TArray<class AFormationSlot*> Slots;
-	const int MaxNbrSlots{ 6 };
-	bool bAreSlotAssigned;
 	bool bIsMoving;
 
 protected:
-	void SetDestination(const FVector& dest);
+	class AGPP_ResearchCharacter* Leader;
+
+	TSubclassOf<class AFormationSlot> SlotBP;
+	TArray<AFormationSlot*> Slots;
+
+	int NbrSlotCreated;
+	bool bAreSlotCreated;
+
+	virtual void SetDestination(const FVector& dest);
+	
 };
 
-class GPP_RESEARCH_API Line : public Formation
+class GPP_RESEARCH_API Line final : public Formation
 {
 public:
-	Line();
+	Line(UClass* bpSlotRef);
 	~Line() = default;
 
-	virtual void AssignSlots(TArray<AActor*> actors) override;
+	virtual void AssignSlots(const TArray<AActor*>& actors) override;
+	virtual void UpdateSlots(float deltaTime) override;
 
 private:
-	FVector Offset;
+	float Offset;
 
-	
+	void CreateSlot(AActor* actor, int& positionIndex, int index, UWorld* world, const FActorSpawnParameters& params);
+};
 
+class GPP_RESEARCH_API Circle : public Formation
+{
+public:
+	Circle(UClass* bpSlotRef);
+	~Circle() = default;
+
+	virtual void AssignSlots(const TArray<AActor*>& actors) override;
+	virtual void UpdateSlots(float deltaTime) override;
+
+protected:
+	float Radius;
+	const float MinRadius{ 150 };
+	const float RadiusStep{ 25 };
+	virtual void SetDestination(const FVector& dest) override;
+private:
+	FVector CenterRelativeToLeader;
+	FVector GetAverageActorPos(const TArray<AActor*>& actors);
+};
+
+class GPP_RESEARCH_API ProtectionCircle final : public Circle
+{
+public:
+	ProtectionCircle(UClass * bpSlotRef);
+	~ProtectionCircle() = default;
+
+	virtual void AssignSlots(const TArray<AActor*> & actors) override;
+
+protected:
+	virtual void SetDestination(const FVector& dest) override;
 };
