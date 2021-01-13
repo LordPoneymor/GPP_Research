@@ -45,6 +45,7 @@ private:
 	void GetInLine();
 	void FormProtectionCircle();
 	void FormCircle();
+	void SplitFormation();
 	void BreakFormation();
 };
 

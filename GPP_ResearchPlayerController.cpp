@@ -70,6 +70,7 @@ void AGPP_ResearchPlayerController::SetupInputComponent()
 	InputComponent->BindAction("LineFormation", IE_Pressed, this, &AGPP_ResearchPlayerController::GetInLine);
 	InputComponent->BindAction("ProtectionCircleFormation", IE_Pressed, this, &AGPP_ResearchPlayerController::FormProtectionCircle);
 	InputComponent->BindAction("CircleFormation", IE_Pressed, this, &AGPP_ResearchPlayerController::FormCircle);
+	InputComponent->BindAction("SplitReform", IE_Pressed, this, &AGPP_ResearchPlayerController::SplitFormation);
 	InputComponent->BindAction("BreakFormation", IE_Pressed, this, &AGPP_ResearchPlayerController::BreakFormation);
 }
 
@@ -148,50 +149,87 @@ void AGPP_ResearchPlayerController::MoveTo()
 
 void AGPP_ResearchPlayerController::GetInLine()
 {
-	if (SelectedActors.Num() > 0 && CurrentFormation != EFormation::EF_Line)
+	if (SelectedActors.Num() <= 0 && CurrentFormation == EFormation::EF_Line)
 	{
-		if (GroupFormation != nullptr)
-		{
-			delete GroupFormation;		
-		}
-		GroupFormation = new Line{ SlotBP };
-		GroupFormation->AssignSlots(SelectedActors);
-		CurrentFormation = EFormation::EF_Line;
-		bIsGroupInFormation = true;
+		return;
 	}
+
+	if (GroupFormation != nullptr)
+	{
+		delete GroupFormation;
+	}
+	GroupFormation = new Line{ SlotBP };
+	GroupFormation->AssignSlots(SelectedActors);
+	CurrentFormation = EFormation::EF_Line;
+	bIsGroupInFormation = true;
 }
 
 void AGPP_ResearchPlayerController::FormProtectionCircle()
 {
-	if (SelectedActors.Num() > 0 && CurrentFormation != EFormation::EF_ProtectionCircle)
+	if (SelectedActors.Num() <= 0 && CurrentFormation == EFormation::EF_ProtectionCircle)
 	{
-		if (GroupFormation != nullptr)
-		{
-			delete GroupFormation;
-		}
-		GroupFormation = new ProtectionCircle{ SlotBP };
-		GroupFormation->AssignSlots(SelectedActors);
-		CurrentFormation = EFormation::EF_ProtectionCircle;
-		bIsGroupInFormation = true;
+		return;
 	}
+	if (GroupFormation != nullptr)
+	{
+		delete GroupFormation;
+	}
+	GroupFormation = new ProtectionCircle{ SlotBP };
+	GroupFormation->AssignSlots(SelectedActors);
+	CurrentFormation = EFormation::EF_ProtectionCircle;
+	bIsGroupInFormation = true;
 }
 
 void AGPP_ResearchPlayerController::FormCircle()
 {
-	if (SelectedActors.Num() > 0)
+	if (SelectedActors.Num() <= 0 || CurrentFormation == EFormation::EF_Circle)
 	{
-		if (GroupFormation != nullptr)
-		{
-			delete GroupFormation;
-		}
-		GroupFormation = new Circle{ SlotBP };
-			
-		CurrentFormation = EFormation::EF_Circle;
-		GroupFormation->AssignSlots(SelectedActors);
-		bIsGroupInFormation = true;
+		return;
 	}
+	if (GroupFormation != nullptr)
+	{
+		delete GroupFormation;
+	}
+	GroupFormation = new Circle{ SlotBP };
+
+	CurrentFormation = EFormation::EF_Circle;
+	GroupFormation->AssignSlots(SelectedActors);
+	bIsGroupInFormation = true;
 }
 
+void AGPP_ResearchPlayerController::SplitFormation()
+{
+	if (SelectedActors.Num() <= 0 || CurrentFormation == EFormation::EF_None || !bIsGroupInFormation)
+	{
+		return;
+	}
+
+	delete GroupFormation;
+	if (CurrentFormation != EFormation::EF_Splited)
+	{
+		GroupFormation = new Splited{ SlotBP, CurrentFormation, SelectedActors };
+		CurrentFormation = EFormation::EF_Splited;
+	}
+	else
+	{
+		switch (static_cast<Splited*>(GroupFormation)->GetFormation())
+		{
+		case EFormation::EF_Line:
+			GroupFormation = new Line{ SlotBP };
+			CurrentFormation = EFormation::EF_Line;
+			break;
+		case EFormation::EF_Circle:
+			GroupFormation = new Circle{ SlotBP };
+			CurrentFormation = EFormation::EF_Circle;
+			break;
+		case EFormation::EF_ProtectionCircle:
+			GroupFormation = new ProtectionCircle{ SlotBP };
+			CurrentFormation = EFormation::EF_ProtectionCircle;
+			break;
+		}
+		GroupFormation->AssignSlots(SelectedActors);
+	}
+}
 void AGPP_ResearchPlayerController::BreakFormation()
 {
 	bIsGroupInFormation = false;

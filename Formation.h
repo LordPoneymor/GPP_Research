@@ -9,6 +9,7 @@ enum class EFormation : uint8
 	EF_Line UMETA(DisplayName = "Line"),
 	EF_ProtectionCircle UMETA(DisplayName = "Protection Circle"),
 	EF_Circle UMETA(DisplayName = "Circle"),
+	EF_Splited UMETA(DisplayName = "Splited"),
 	EF_None UMETA(DisplayName = "None"),
 
 	EF_MAX UMETA(DisplayName = "Default Max")
@@ -26,9 +27,10 @@ public:
 	void MoveToDestination(const FVector& dest);
 
 	bool bIsMoving;
+	class AActor* Leader;
 
 protected:
-	class AGPP_ResearchCharacter* Leader;
+	
 
 	TSubclassOf<class AFormationSlot> SlotBP;
 	TArray<AFormationSlot*> Slots;
@@ -36,7 +38,7 @@ protected:
 	int NbrSlotCreated;
 	bool bAreSlotCreated;
 
-	virtual void SetDestination(const FVector& dest);
+	virtual void SetDestination(const FVector& dest) = 0;
 	
 };
 
@@ -48,6 +50,9 @@ public:
 
 	virtual void AssignSlots(const TArray<AActor*>& actors) override;
 	virtual void UpdateSlots(float deltaTime) override;
+
+protected:
+	virtual void SetDestination(const FVector& dest) override;
 
 private:
 	float Offset;
@@ -84,4 +89,24 @@ public:
 
 protected:
 	virtual void SetDestination(const FVector& dest) override;
+};
+
+class GPP_RESEARCH_API Splited final : public Formation
+{
+public:
+	Splited(UClass * bpSlotRef, EFormation form, const TArray<AActor*>& actors);
+	~Splited();
+
+	virtual void AssignSlots(const TArray<AActor*> & actors) override;
+	virtual void UpdateSlots(float deltaTime) override;
+	EFormation GetFormation()const { return Form; }
+protected:
+	virtual void SetDestination(const FVector & dest) override;
+private:
+	const float DistanceBetweenGroups{ 2000 };
+	const float LeaderAheadPos{ 200 };
+
+	Formation* SubGroupFormation1;
+	Formation* SubGroupFormation2;
+	EFormation Form;
 };
