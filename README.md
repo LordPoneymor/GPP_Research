@@ -11,7 +11,9 @@ The scope of the project includes:
   - Destination prediction for each agent in the formation
   
  
- The project will be done in unreal engine using the topdown template as a base.
+ The project will be done in unreal engine using the topdown template as a base. It will be C++ code based but blueprints will also be used for faster implementation of non AI related features.
+ 
+ 
  
  The bibliography for this project includes :
  
