@@ -1,6 +1,6 @@
-# Group formations and movement
+# GROUP FORMATIONS AND MOVEMENT
 
-# Description and goal
+  # Description and goal
 
 The goal of this project is to apply the seek steering behavior to a group of agents.
 
@@ -15,7 +15,7 @@ The scope of the project includes:
  
  The project will be done in unreal engine using the topdown template as a base. It will be C++ code based but blueprints will also be used for faster implementation of non AI related features.
  
- # Design and implementation
+  # Design and implementation
  
  After conducting the necessary research, I understood that a coordinated group movement or a group formation was based on the use of slots assigned to each unit and that the unit woukd follow. The position of all slots in the formation would be determined relatively to one leader slot and their orientation will be the one of the leader.
  
@@ -31,6 +31,16 @@ The scope of the project includes:
  The last formation is a split group formation. When the group is already in formation and the solit function is called, the group will divide in two smaller group with the same formation. Pressing a second time will merge the group again.
  
  This is done with a Splited class deriving from formation which contains to Formation pointer. On initialization, a AFormationSlot object is spawn and will serve as leader. Then two Formation are created and their respective leader is assigned the current formation leader as the slot to follow. They are then placed at predetermined distance from it.
+ 
+  # Possible applications and extensions
+  
+  A system that allows units to get into a specific formation, and keep while moving and even when getting close to obstacle would be obviously very useful to a real time strategy game. This opens the strategic possibilities for the player and allows a more in depth micro management.
+  
+  The movement destination prediction is a much needed player feedback in games with a lot of different units at all time on screen.
+  
+  Possible extensions and future projects:
+    - With different unit types, formation could be designed to improve the effectiveness of a battle group.
+    - On a bigger scale, coordinated units movement could allow the formation of batallion in some kind of Total War like games.
  
 # Bibliography
  
